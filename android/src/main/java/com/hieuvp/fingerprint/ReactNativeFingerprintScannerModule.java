@@ -1,5 +1,10 @@
 package com.hieuvp.fingerprint;
 
+import android.app.Activity;
+import android.app.KeyguardManager;
+import android.os.Bundle;
+import android.content.Intent;
+import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -11,15 +16,18 @@ import com.wei.android.lib.fingerprintidentify.base.BaseFingerprint.FingerprintI
 import com.wei.android.lib.fingerprintidentify.base.BaseFingerprint.FingerprintIdentifyListener;
 
 public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaModule
-        implements LifecycleEventListener {
+        implements LifecycleEventListener, ActivityEventListener {
     public static final int MAX_AVAILABLE_TIMES = Integer.MAX_VALUE;
+    private static final int DEVICE_CREDENTIAL_CONFIRMATION_CODE = 8819;
 
     private final ReactApplicationContext mReactContext;
     private FingerprintIdentify mFingerprintIdentify;
+    private Promise pendingPromise = null;
 
     public ReactNativeFingerprintScannerModule(ReactApplicationContext reactContext) {
         super(reactContext);
         mReactContext = reactContext;
+        mReactContext.addActivityEventListener(this);
     }
 
     @Override
@@ -38,6 +46,22 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
     @Override
     public void onHostDestroy() {
         this.release();
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+    }
+
+    @Override
+    public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+        if (requestCode == DEVICE_CREDENTIAL_CONFIRMATION_CODE && this.pendingPromise != null) {
+            if (resultCode == Activity.RESULT_OK) {
+                this.pendingPromise.resolve(true);
+            } else {
+                this.pendingPromise.reject("UserCancel", "UserCancel");
+            }
+            this.pendingPromise = null;
+        }
     }
 
     private FingerprintIdentify getFingerprintIdentify() {
@@ -122,6 +146,18 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
             promise.reject(errorMessage, errorMessage);
         } else {
             promise.resolve("Fingerprint");
+        }
+    }
+
+    @ReactMethod
+    public void confirmDeviceCredential(final String title, final String description, final Promise promise) {
+        KeyguardManager keyguardManager = (KeyguardManager) mReactContext.getSystemService(mReactContext.KEYGUARD_SERVICE);
+        if (keyguardManager.isKeyguardSecure()) {
+            this.pendingPromise = promise;
+            Intent credentialConfirmationIntent = keyguardManager.createConfirmDeviceCredentialIntent(title, description);
+            mReactContext.startActivityForResult(credentialConfirmationIntent, DEVICE_CREDENTIAL_CONFIRMATION_CODE, Bundle.EMPTY);
+        } else {
+            promise.reject("KeyguardNotSecure", "KeyguardNotSecure");
         }
     }
 }

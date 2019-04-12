@@ -150,6 +150,16 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
     }
 
     @ReactMethod
+    public void isKeyguardSecure(final Promise promise) {
+        KeyguardManager keyguardManager = (KeyguardManager) mReactContext.getSystemService(mReactContext.KEYGUARD_SERVICE);
+        if (keyguardManager.isKeyguardSecure()) {
+            promise.resolve(true);
+        } else {
+            promise.reject("KeyguardNotSecure", "KeyguardNotSecure");
+        }
+    }
+
+    @ReactMethod
     public void confirmDeviceCredential(final String title, final String description, final Promise promise) {
         KeyguardManager keyguardManager = (KeyguardManager) mReactContext.getSystemService(mReactContext.KEYGUARD_SERVICE);
         if (keyguardManager.isKeyguardSecure()) {

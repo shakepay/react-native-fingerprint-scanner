@@ -2,7 +2,6 @@ package com.hieuvp.fingerprint;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
-import android.os.Bundle;
 import android.content.Intent;
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.LifecycleEventListener;
@@ -161,11 +160,19 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
 
     @ReactMethod
     public void confirmDeviceCredential(final String title, final String description, final Promise promise) {
+        Activity currentActivity = getCurrentActivity();
+
+        if (currentActivity == null) {
+          promise.reject("E_ACTIVITY_DOES_NOT_EXIST", "Activity doesn't exist");
+          return;
+        }
+
         KeyguardManager keyguardManager = (KeyguardManager) mReactContext.getSystemService(mReactContext.KEYGUARD_SERVICE);
+
         if (keyguardManager.isKeyguardSecure()) {
             this.pendingPromise = promise;
             Intent credentialConfirmationIntent = keyguardManager.createConfirmDeviceCredentialIntent(title, description);
-            mReactContext.startActivityForResult(credentialConfirmationIntent, DEVICE_CREDENTIAL_CONFIRMATION_CODE, Bundle.EMPTY);
+            currentActivity.startActivityForResult(credentialConfirmationIntent, DEVICE_CREDENTIAL_CONFIRMATION_CODE);
         } else {
             promise.reject("KeyguardNotSecure", "KeyguardNotSecure");
         }

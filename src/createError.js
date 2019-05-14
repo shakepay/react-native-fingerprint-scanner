@@ -10,7 +10,8 @@ const ERRORS = {
   FingerprintScannerUnknownError: 'Could not authenticate for an unknown reason.',
   FingerprintScannerNotSupported: 'Device does not support Fingerprint Scanner.',
   DeviceLocked: 'Authentication was not successful, the device currently in a lockout of 30 seconds',
-  KeyguardNotSecure: 'Device is not secured by a PIN, pattern or password or a SIM card'
+  KeyguardNotSecure: 'Device is not secured by a PIN, pattern or password or a SIM card',
+  E_ACTIVITY_DOES_NOT_EXIST: 'Activity does not exist'
 };
 
 class FingerprintScannerError extends Error {

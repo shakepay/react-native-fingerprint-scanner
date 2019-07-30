@@ -9,10 +9,6 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter;
-import com.wei.android.lib.fingerprintidentify.FingerprintIdentify;
-import com.wei.android.lib.fingerprintidentify.base.BaseFingerprint.FingerprintIdentifyExceptionListener;
-import com.wei.android.lib.fingerprintidentify.base.BaseFingerprint.FingerprintIdentifyListener;
 
 public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaModule
         implements LifecycleEventListener, ActivityEventListener {
@@ -20,7 +16,6 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
     private static final int DEVICE_CREDENTIAL_CONFIRMATION_CODE = 8819;
 
     private final ReactApplicationContext mReactContext;
-    private FingerprintIdentify mFingerprintIdentify;
     private Promise pendingPromise = null;
 
     public ReactNativeFingerprintScannerModule(ReactApplicationContext reactContext) {
@@ -44,7 +39,6 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
 
     @Override
     public void onHostDestroy() {
-        this.release();
     }
 
     @Override
@@ -60,91 +54,6 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
                 this.pendingPromise.reject("UserCancel", "UserCancel");
             }
             this.pendingPromise = null;
-        }
-    }
-
-    private FingerprintIdentify getFingerprintIdentify() {
-        if (mFingerprintIdentify != null) {
-            return mFingerprintIdentify;
-        }
-        mReactContext.addLifecycleEventListener(this);
-        mFingerprintIdentify = new FingerprintIdentify(getCurrentActivity(),
-                new FingerprintIdentifyExceptionListener() {
-                    @Override
-                    public void onCatchException(Throwable exception) {
-                        mReactContext.removeLifecycleEventListener(
-                                ReactNativeFingerprintScannerModule.this);
-                    }
-                });
-        return mFingerprintIdentify;
-    }
-
-    private String getErrorMessage() {
-        if (!getFingerprintIdentify().isHardwareEnable()) {
-            return "FingerprintScannerNotSupported";
-        } else if (!getFingerprintIdentify().isRegisteredFingerprint()) {
-            return "FingerprintScannerNotEnrolled";
-        } else if (!getFingerprintIdentify().isFingerprintEnable()) {
-            return "FingerprintScannerNotAvailable";
-        }
-        return null;
-    }
-
-    @ReactMethod
-    public void authenticate(final Promise promise) {
-        final String errorMessage = getErrorMessage();
-        if (errorMessage != null) {
-            promise.reject(errorMessage, errorMessage);
-            ReactNativeFingerprintScannerModule.this.release();
-            return;
-        }
-
-        getFingerprintIdentify().resumeIdentify();
-        getFingerprintIdentify().startIdentify(MAX_AVAILABLE_TIMES, new FingerprintIdentifyListener() {
-            @Override
-            public void onSucceed() {
-                promise.resolve(true);
-                ReactNativeFingerprintScannerModule.this.release();
-            }
-
-            @Override
-            public void onNotMatch(int availableTimes) {
-                mReactContext.getJSModule(RCTDeviceEventEmitter.class)
-                        .emit("FINGERPRINT_SCANNER_AUTHENTICATION", "AuthenticationNotMatch");
-            }
-
-            @Override
-            public void onFailed(boolean isDeviceLocked) {
-                if(isDeviceLocked){
-                    promise.reject("AuthenticationFailed", "DeviceLocked");
-                } else {
-                    promise.reject("AuthenticationFailed", "AuthenticationFailed");
-                }
-                ReactNativeFingerprintScannerModule.this.release();
-            }
-
-            @Override
-            public void onStartFailedByDeviceLocked() {
-                // the first start failed because the device was locked temporarily
-                promise.reject("AuthenticationFailed", "DeviceLocked");
-            }
-        });
-    }
-
-    @ReactMethod
-    public void release() {
-        getFingerprintIdentify().cancelIdentify();
-        mFingerprintIdentify = null;
-        mReactContext.removeLifecycleEventListener(this);
-    }
-
-    @ReactMethod
-    public void isSensorAvailable(final Promise promise) {
-        String errorMessage = getErrorMessage();
-        if (errorMessage != null) {
-            promise.reject(errorMessage, errorMessage);
-        } else {
-            promise.resolve("Fingerprint");
         }
     }
 

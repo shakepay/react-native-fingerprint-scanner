@@ -81,7 +81,11 @@ public class ReactNativeFingerprintScannerModule extends ReactContextBaseJavaMod
         if (keyguardManager.isKeyguardSecure()) {
             this.pendingPromise = promise;
             Intent credentialConfirmationIntent = keyguardManager.createConfirmDeviceCredentialIntent(title, description);
-            currentActivity.startActivityForResult(credentialConfirmationIntent, DEVICE_CREDENTIAL_CONFIRMATION_CODE);
+            if (credentialConfirmationIntent != null) {
+                currentActivity.startActivityForResult(credentialConfirmationIntent, DEVICE_CREDENTIAL_CONFIRMATION_CODE);
+            } else {
+                promise.reject("KeyguardNotSecure", "KeyguardNotSecure");
+            }
         } else {
             promise.reject("KeyguardNotSecure", "KeyguardNotSecure");
         }
